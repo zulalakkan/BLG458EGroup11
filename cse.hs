@@ -59,23 +59,28 @@ getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + getAbilityScore (ability1 a) + 
 
 readFromFile :: String -> IO()
 readFromFile filename = do handle <- openFile filename ReadMode
-                           -- contents <- hGetContents handle
-                           line <- hGetLine handle
-                           -- putStrLn (show (length (words line)))
-                           let ninja = parseLine (words line)
-                           putStrLn (show(ninja))
-                           putStrLn (show (getScore ninja))
+                           readLoop handle
                            hClose handle
+
+readLoop :: Handle -> IO()
+readLoop handle = do eof <- hIsEOF handle
+                     if eof
+                        then return()
+                        else do line <- hGetLine handle
+                                let ninja = parseLine (words line)
+                                -- let ninjas = placeList ninja exam
+                                -- putStrLn (show(ninja))
+                                -- putStrLn (show (getScore ninja))
+                                readLoop handle
 
 parseLine :: [String] -> Ninja
 parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
-                        country = countryCode c, status = "Junior",
+                        country = countryChar c, status = "Junior",
                         exam1 = read e1 :: Float, exam2 = read e2 :: Float,
                         ability1 = a1, ability2 = a2, r = 0}
 
-
-countryCode :: String -> Char
-countryCode c = case c of
+countryChar :: String -> Char
+countryChar c = case c of
     "Fire"      -> 'f'
     "Lightning" -> 'l'
     "Wind"      -> 'n'
