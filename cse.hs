@@ -85,12 +85,12 @@ parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
                         ability1 = a1, ability2 = a2, r = 0}
 
 placeNinja :: Ninja -> [[Ninja]] -> [[Ninja]]
-placeNinja ninja lands = loop (index (country ninja)) lands 0
+placeNinja ninja lands = placeIter (index (country ninja)) lands 0
             where
-                loop :: Int -> [[Ninja]] -> Int -> [[Ninja]]
-                loop _ _ 5 = []
-                loop i (l:ls) n = if n == i then (ninja : l) : (ls)
-                                            else l : (loop i ls (n+1))
+                placeIter :: Int -> [[Ninja]] -> Int -> [[Ninja]]
+                placeIter _ _ 5 = []
+                placeIter i (l:ls) n = if n == i then (ninja : l) : (ls)
+                                            else l : (placeIter i ls (n+1))
             
 
 index :: Char -> Int
@@ -110,3 +110,25 @@ countryChar c = case c of
     "Water"     -> 'w'
     "Earth"     -> 'e'
 
+updateRound :: Ninja -> Ninja
+updateRound n = n {r = r n + 1}
+
+updateStatus :: Ninja -> Ninja
+updateStatus n = n {status = "Journeyman"}
+
+update :: Ninja -> [[Ninja]] -> (Ninja->Ninja) -> [[Ninja]]
+update ninja ninjas updateFunc = updateList (updateFunc ninja) ninjas 
+
+updateList :: Ninja -> [[Ninja]] -> [[Ninja]]
+updateList _ [] = []
+updateList n ls@(l:ls') = if (index $ country n) + length ls == 5
+                            then (updateLand n l):ls'
+                            else l: updateList n ls'
+
+-- update list with updated ninja 
+-- consider ninja comparison instead of name comparison
+updateLand :: Ninja -> [Ninja] -> [Ninja]
+updateLand _ []       = []
+updateLand ninja (n:ns) = if (name ninja) == name n
+                            then ninja : ns
+                            else n: updateLand ninja ns
