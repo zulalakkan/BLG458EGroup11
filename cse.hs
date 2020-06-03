@@ -13,23 +13,51 @@ menu lands = do putStrLn "a) View a Country's Ninja Information\n\
                 \b) View All Countries' Ninja Information\n\
                 \c) Make a Round Between Ninjas\n\
                 \d) Make a Round Between Countries\n\
-                \e) Exit\n\
-                \Enter the action"
+                \e) Exit"
+                putStr "Enter the action: "
+                hFlush stdout                                          -- to make putStr and getLine work as expected
                 str <- getLine
-                let ch = head str
-                lands' <- action ch lands
-                if elem ch "eE" then return() 
-                else menu lands'
+                if str == [] then menu lands
+                else do let ch = head str
+                        lands' <- action ch lands
+                        putStrLn ""
+                        if elem ch "eE" then return() 
+                        else menu lands'
 
 action :: Char -> [[Ninja]] -> IO [[Ninja]]
 action ch ns
-    | elem ch "aA" =  return(ns)
+    | elem ch "aA" =  do putStr "Enter the country code: "
+                         hFlush stdout 
+                         line <- getLine
+                         (actionA ns) $ head line
+                         return(ns)
     | elem ch "bB" = return(ns)
     | elem ch "cC" = return(ns)
     | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
     | otherwise = do putStrLn "Unknown action!"
                      return (ns)
+
+actionA :: [[Ninja]] -> (Char -> IO())
+actionA ns = \ch -> do let land = ns !! (index ch)
+                       printNinjas land
+                       if promoted land then putStrLn $warning ch else return()
+
+printNinjas :: [Ninja] -> IO()
+printNinjas []     = return()
+printNinjas (n:ns) = do putStrLn(name n ++ ", Score: " ++ show(getScore n)++", Status: \
+                        \"++ status n ++", Round: "++show(r n))
+                        printNinjas ns 
+
+lands :: [String]
+lands = ["Fire", "Lightning", "Water", "Wind", "Earth"]
+
+warning :: Char -> String
+warning ch = lands !! (index ch) ++ " country cannot be included in a fight" 
+
+promoted :: [Ninja] -> Bool
+promoted [] = False
+promoted (n:ns) = if status n == "Journeyman" then True else promoted ns
 
 -- consider adding "score::Float" field
 data Ninja = Ninja { name:: String, country:: Char,
@@ -132,14 +160,14 @@ countryCode c = case c of
     "Water"     -> 'w'
     "Earth"     -> 'e'
 
+update :: Ninja -> [[Ninja]] -> (Ninja->Ninja) -> [[Ninja]]
+update ninja ninjas updateFunc = updateList (updateFunc ninja) ninjas 
+
 updateRound :: Ninja -> Ninja
 updateRound n = n {r = r n + 1}
 
 updateStatus :: Ninja -> Ninja
 updateStatus n = n {status = "Journeyman"}
-
-update :: Ninja -> [[Ninja]] -> (Ninja->Ninja) -> [[Ninja]]
-update ninja ninjas updateFunc = updateList (updateFunc ninja) ninjas 
 
 updateList :: Ninja -> [[Ninja]] -> [[Ninja]]
 updateList _ [] = []
