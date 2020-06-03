@@ -3,10 +3,33 @@ import System.IO -- file operations
 
 main :: IO()
 main = do args <- getArgs
-          putStrLn "hello, world!"
           let filename = head args
-          participants <- readFromFile filename
+          lands <- readFromFile filename
+          menu lands
           return()
+
+menu :: [[Ninja]] -> IO()
+menu lands = do putStrLn "a) View a Country's Ninja Information\n\
+                \b) View All Countries' Ninja Information\n\
+                \c) Make a Round Between Ninjas\n\
+                \d) Make a Round Between Countries\n\
+                \e) Exit\n\
+                \Enter the action"
+                str <- getLine
+                let ch = head str
+                lands' <- action ch lands
+                if elem ch "eE" then return() 
+                else menu lands'
+
+action :: Char -> [[Ninja]] -> IO [[Ninja]]
+action ch ns
+    | elem ch "aA" =  return(ns)
+    | elem ch "bB" = return(ns)
+    | elem ch "cC" = return(ns)
+    | elem ch "dD" = return(ns)
+    | elem ch "eE" = return(ns)
+    | otherwise = do putStrLn "Unknown action!"
+                     return (ns)
 
 -- consider adding "score::Float" field
 data Ninja = Ninja { name:: String, country:: Char,
@@ -49,13 +72,13 @@ abilities = [("Clone",20),
              ("Rock", 20)]
 
 getAbilityScore :: String -> Float
-getAbilityScore str = getScore str abilities
+getAbilityScore str = abilityScore str abilities
             where
-            getScore :: String -> [Ability] -> Float
-            getScore s []    = 0
-            getScore s xs@((a, score):xs')
-                | a == s        = score
-                | otherwise     = getScore s xs'
+            abilityScore :: String -> [Ability] -> Float
+            abilityScore s []    = 0
+            abilityScore s xs@((a, score):xs')
+                | s == a        = score
+                | otherwise     = abilityScore s xs'
 
 getScore :: Ninja -> Float
 getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + getAbilityScore (ability1 a) + getAbilityScore (ability2 a)
@@ -80,7 +103,7 @@ readLoop handle participants = do
 
 parseLine :: [String] -> Ninja
 parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
-                        country = countryChar c, status = "Junior",
+                        country = countryCode c, status = "Junior",
                         exam1 = read e1 :: Float, exam2 = read e2 :: Float,
                         ability1 = a1, ability2 = a2, r = 0}
 
@@ -91,7 +114,6 @@ placeNinja ninja lands = placeIter (index (country ninja)) lands 0
                 placeIter _ _ 5 = []
                 placeIter i (l:ls) n = if n == i then (ninja : l) : (ls)
                                             else l : (placeIter i ls (n+1))
-            
 
 index :: Char -> Int
 index c
@@ -102,8 +124,8 @@ index c
     | elem c "eE" = 4                       -- earth
     | otherwise   = error "unknown country character"
 
-countryChar :: String -> Char
-countryChar c = case c of
+countryCode :: String -> Char
+countryCode c = case c of
     "Fire"      -> 'f'
     "Lightning" -> 'l'
     "Wind"      -> 'n'
