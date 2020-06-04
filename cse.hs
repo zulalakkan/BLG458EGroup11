@@ -26,12 +26,13 @@ menu lands = do putStrLn "a) View a Country's Ninja Information\n\
 
 action :: Char -> [[Ninja]] -> IO [[Ninja]]
 action ch ns
-    | elem ch "aA" =  do putStr "Enter the country code: "
-                         hFlush stdout 
-                         line <- getLine
-                         (actionA ns) $ head line
-                         return(ns)
-    | elem ch "bB" = return(ns)
+    | elem ch "aA" = do putStr "Enter the country code: "
+                        hFlush stdout 
+                        line <- getLine
+                        (actionA ns) $ head line
+                        return(ns)
+    | elem ch "bB" = do printNinjas (sort precede (concat ns))
+                        return(ns)
     | elem ch "cC" = return(ns)
     | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
@@ -109,7 +110,7 @@ getAbilityScore str = abilityScore str abilities
                 | otherwise     = abilityScore s xs'
 
 getScore :: Ninja -> Float
-getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + getAbilityScore (ability1 a) + getAbilityScore (ability2 a)
+getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + getAbilityScore (ability1 a) + getAbilityScore (ability2 a) + 10.0*read(show(r a))::Float
 
 readFromFile :: String -> IO [[Ninja]]
 readFromFile filename = do handle <- openFile filename ReadMode
@@ -124,10 +125,8 @@ readLoop handle participants = do
                         then return(participants)
                         else do line <- hGetLine handle
                                 let ninja = parseLine (words line)
-                                let updatedParticipants = placeNinja ninja participants
-                                --putStrLn (show(ninja))
-                                -- putStrLn (show (getScore ninja))
-                                readLoop handle updatedParticipants
+                                let participants' = placeNinja ninja participants
+                                readLoop handle participants'
 
 parseLine :: [String] -> Ninja
 parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
@@ -135,12 +134,28 @@ parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
                         exam1 = read e1 :: Float, exam2 = read e2 :: Float,
                         ability1 = a1, ability2 = a2, r = 0}
 
+insert :: (Ninja -> Ninja -> Bool) -> Ninja -> [Ninja] -> [Ninja]
+insert f ninja [] = [ninja]
+insert f ninja ns@(n':ns')
+    | f ninja n' = ninja : ns
+    | otherwise  = n' : insert f ninja ns' 
+
+precede :: Ninja -> Ninja -> Bool
+precede n1 n2
+    | r n1 < r n2  = True
+    | r n1 == r n2 = if getScore n1 >= getScore n2 then True else False
+    | otherwise    = False 
+
+sort :: (Ninja -> Ninja -> Bool) -> [Ninja] -> [Ninja]
+sort f []     = []
+sort f (n:ns) = insert f n (sort f ns)
+
 placeNinja :: Ninja -> [[Ninja]] -> [[Ninja]]
 placeNinja ninja lands = placeIter (index (country ninja)) lands 0
             where
                 placeIter :: Int -> [[Ninja]] -> Int -> [[Ninja]]
                 placeIter _ _ 5 = []
-                placeIter i (l:ls) n = if n == i then (ninja : l) : (ls)
+                placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
                                             else l : (placeIter i ls (n+1))
 
 index :: Char -> Int
@@ -177,8 +192,9 @@ updateList n ls@(l:ls') = if (index $ country n) + length ls == 5
 
 -- update list with updated ninja 
 -- consider ninja comparison instead of name comparison
+-- check insert part again!! 
 updateLand :: Ninja -> [Ninja] -> [Ninja]
 updateLand _ []       = []
 updateLand ninja (n:ns) = if (name ninja) == name n
-                            then ninja : ns
+                            then insert precede ninja ns
                             else n: updateLand ninja ns
