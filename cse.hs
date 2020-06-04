@@ -29,25 +29,25 @@ action ch ns
     | elem ch "aA" = do putStr "Enter the country code: "
                         hFlush stdout 
                         line <- getLine
-                        (actionA ns) $ head line
+                        actionA ns $ head line
                         return(ns)
-    | elem ch "bB" = do printNinjas (sort precede (concat ns))
+    | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
     | elem ch "cC" = return(ns)
     | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
-    | otherwise = do putStrLn "Unknown action!"
-                     return (ns)
+    | otherwise    = do putStrLn "Unknown action!"
+                        return (ns)
 
 actionA :: [[Ninja]] -> (Char -> IO())
-actionA ns = \ch -> do let land = ns !! (index ch)
+actionA ns = \ch -> do let land = (!!) ns $ index ch
                        printNinjas land
-                       if promoted land then putStrLn $warning ch else return()
+                       if promoted land then putStrLn $ warning ch else return()
 
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
-printNinjas (n:ns) = do putStrLn(name n ++ ", Score: " ++ show(getScore n)++", Status: \
-                        \"++ status n ++", Round: "++show(r n))
+printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
+                        \" ++ status n ++ ", Round: "++ (show . r) n
                         printNinjas ns 
 
 lands :: [String]
@@ -58,7 +58,7 @@ warning ch = lands !! (index ch) ++ " country cannot be included in a fight"
 
 promoted :: [Ninja] -> Bool
 promoted [] = False
-promoted (n:ns) = if status n == "Journeyman" then True else promoted ns
+promoted n  = (status . last) n == "Journeyman"
 
 -- consider adding "score::Float" field
 data Ninja = Ninja { name:: String, country:: Char,
@@ -110,7 +110,7 @@ getAbilityScore str = abilityScore str abilities
                 | otherwise     = abilityScore s xs'
 
 getScore :: Ninja -> Float
-getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + getAbilityScore (ability1 a) + getAbilityScore (ability2 a) + 10.0*read(show(r a))::Float
+getScore a = 0.5 * (exam1 a) + 0.3 * (exam2 a) + (getAbilityScore . ability1) a + (getAbilityScore . ability2) a + 10.0 * read (show $ r a)::Float
 
 readFromFile :: String -> IO [[Ninja]]
 readFromFile filename = do handle <- openFile filename ReadMode
@@ -124,7 +124,7 @@ readLoop handle participants = do
                         if eof
                         then return(participants)
                         else do line <- hGetLine handle
-                                let ninja = parseLine (words line)
+                                let ninja = parseLine $ words line
                                 let participants' = placeNinja ninja participants
                                 readLoop handle participants'
 
@@ -143,18 +143,18 @@ insert f ninja ns@(n':ns')
 precede :: Ninja -> Ninja -> Bool
 precede n1 n2
     | r n1 < r n2  = True
-    | r n1 == r n2 = if getScore n1 >= getScore n2 then True else False
+    | r n1 == r n2 = getScore n1 >= getScore n2
     | otherwise    = False 
 
 sort :: (Ninja -> Ninja -> Bool) -> [Ninja] -> [Ninja]
 sort f []     = []
-sort f (n:ns) = insert f n (sort f ns)
+sort f (n:ns) = insert f n $ sort f ns
 
 placeNinja :: Ninja -> [[Ninja]] -> [[Ninja]]
-placeNinja ninja lands = placeIter (index (country ninja)) lands 0
+placeNinja ninja lands = placeIter (index $ country ninja) lands 0
             where
                 placeIter :: Int -> [[Ninja]] -> Int -> [[Ninja]]
-                placeIter _ _ 5 = []
+                placeIter _ _ 5      = []
                 placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
                                             else l : (placeIter i ls (n+1))
 
@@ -185,7 +185,7 @@ updateStatus :: Ninja -> Ninja
 updateStatus n = n {status = "Journeyman"}
 
 updateList :: Ninja -> [[Ninja]] -> [[Ninja]]
-updateList _ [] = []
+updateList _ []         = []
 updateList n ls@(l:ls') = if (index $ country n) + length ls == 5
                             then (updateLand n l):ls'
                             else l: updateList n ls'
@@ -194,7 +194,7 @@ updateList n ls@(l:ls') = if (index $ country n) + length ls == 5
 -- consider ninja comparison instead of name comparison
 -- check insert part again!! 
 updateLand :: Ninja -> [Ninja] -> [Ninja]
-updateLand _ []       = []
+updateLand _ []         = []
 updateLand ninja (n:ns) = if (name ninja) == name n
                             then insert precede ninja ns
                             else n: updateLand ninja ns
