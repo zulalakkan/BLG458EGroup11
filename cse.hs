@@ -33,8 +33,8 @@ action ch ns
                         return(ns)
     | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
-    | elem ch "cC" = do actionC ns
-                        return(ns)
+    | elem ch "cC" = do ns' <- actionC ns
+                        return(ns')
     | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
     | otherwise    = do putStrLn "Unknown action!"
@@ -52,16 +52,19 @@ actionC ns = do putStr "Enter first ninja's name: "
                 putStr "Enter first ninja's country code: "
                 hFlush stdout
                 firstCode <- getLine
-                if True == checkNinja (concat ns) firstName (firstCode !! 0)
+                if True == checkNinja (concat ns) firstName (head firstCode)
                     then do putStr "Enter second ninja's name: "
                             hFlush stdout
                             secondName <- getLine
                             putStr "Enter second ninja's country code: "
                             hFlush stdout
                             secondCode <- getLine
-                            if True == checkNinja (concat ns) secondName (secondCode !! 0)
-                                then do printWinner ((fight (getNinja (concat ns) firstName (firstCode !! 0)) (getNinja (concat ns) secondName (secondCode !! 0))) !! 0)
-                                        return(ns)
+                            if True == checkNinja (concat ns) secondName (head secondCode)
+                                then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
+                                        let ninjas' = update winner ns updateRound
+                                        let winner' = getNinja (concat ninjas') (name winner) (country winner)
+                                        printWinner winner'
+                                        return(ninjas')
                                 else do putStrLn "The given ninja doesn't exist"
                                         return(ns)
                     else do putStrLn "The given ninja doesn't exist!"
@@ -82,13 +85,13 @@ checkNinja n ninjaName ninjaCode
     | otherwise = True
 
 getNinja :: [Ninja] -> String -> Char -> Ninja
-getNinja ns ninjaName ninjaCode = (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns) !! 0
+getNinja ns ninjaName ninjaCode = head (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns)
 
 fight :: Ninja -> Ninja -> [Ninja]
 fight n1 n2
     |getScore n1 > getScore n2 = [n1, n2]
     |getScore n1 == getScore n2 = betterAbility n1 n2
-    |otherwise = [n1, n2]
+    |otherwise = [n2, n1]
         where betterAbility n1 n2
                 |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) > ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
                 |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) == ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
