@@ -61,7 +61,7 @@ actionC ns = do putStr "Enter first ninja's name: "
                             secondCode <- getLine
                             if True == checkNinja (concat ns) secondName (head secondCode)
                                 then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
-                                        let ninjas' = update winner ns updateRound
+                                        let ninjas' = update winner ns
                                         let winner' = getNinja (concat ninjas') (name winner) (country winner)
                                         printWinner winner'
                                         return(ninjas')
@@ -233,11 +233,11 @@ countryCode c = case c of
     "Water"     -> 'w'
     "Earth"     -> 'e'
 
-update :: Ninja -> [[Ninja]] -> (Ninja->Ninja) -> [[Ninja]]
-update ninja ninjas updateFunc = updateList (updateFunc ninja) ninjas 
+update :: Ninja -> [[Ninja]] -> [[Ninja]]
+update ninja = updateList (updateRound ninja)
 
 updateRound :: Ninja -> Ninja
-updateRound n = n {r = r n + 1}
+updateRound n = if r n == 2 then updateStatus n {r = r n + 1} else n {r = r n + 1}
 
 updateStatus :: Ninja -> Ninja
 updateStatus n = n {status = "Journeyman"}
