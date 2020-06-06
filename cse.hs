@@ -33,7 +33,8 @@ action ch ns
                         return(ns)
     | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
-    | elem ch "cC" = return(ns)
+    | elem ch "cC" = do actionC ns
+                        return(ns)
     | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
     | otherwise    = do putStrLn "Unknown action!"
@@ -44,11 +45,52 @@ actionA ns = \ch -> do let land = (!!) ns $ index ch
                        printNinjas land
                        if promoted land then putStrLn $ warning ch else return()
 
+actionC :: [[Ninja]] -> IO [[Ninja]]
+actionC ns = do putStr "Enter first ninja's name: "
+                hFlush stdout
+                firstName <- getLine
+                putStr "Enter first ninja's country code: "
+                hFlush stdout
+                firstCode <- getLine
+                if True `elem` checkNinja (concat ns) firstName (firstCode !! 0)
+                    then do putStr "Enter second ninja's name: "
+                            hFlush stdout
+                            secondName <- getLine
+                            putStr "Enter second ninja's country code: "
+                            hFlush stdout
+                            secondCode <- getLine
+                            if True `elem` checkNinja (concat ns) secondName (secondCode !! 0)
+                                then do putStrLn "FIGHT!"
+                                        putStrLn $ name ((fight (getNinja (concat ns) firstName (firstCode !! 0)) (getNinja (concat ns) secondName (secondCode !! 0))) !! 0)
+                                        return(ns)
+                                else do putStrLn "The given ninja doesn't exist"
+                                        return(ns)
+                    else do putStrLn "The given ninja doesn't exist!"
+                            return(ns)
+
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
 printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
                         \" ++ status n ++ ", Round: "++ (show . r) n
-                        printNinjas ns 
+                        printNinjas ns
+
+-- This code is most probably super stupid (a list of bools for one ninja!), but so far it seems to work (written at 4AM).
+-- If you have any idea how to simplify it please do so and make me aware of it.
+checkNinja :: [Ninja] -> String -> Char -> [Bool]
+checkNinja [] _ _ = False : []
+checkNinja (n:ns) ninjaName ninjaCode = (((name n) == ninjaName) && ((country n) == ninjaCode)) : checkNinja ns ninjaName ninjaCode
+
+getNinja :: [Ninja] -> String -> Char -> Ninja
+getNinja ns ninjaName ninjaCode = (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns) !! 0
+
+fight :: Ninja -> Ninja -> [Ninja]
+fight n1 n2
+    |getScore n1 > getScore n2 = [n1, n2]
+    |getScore n1 == getScore n2 = betterAbility n1 n2
+        where betterAbility n1 n2
+                |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) > ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
+                |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) == ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
+                |otherwise = [n2, n1]
 
 lands :: [String]
 lands = ["Fire", "Lightning", "Water", "Wind", "Earth"]
