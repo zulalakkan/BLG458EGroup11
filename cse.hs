@@ -60,8 +60,7 @@ actionC ns = do putStr "Enter first ninja's name: "
                             hFlush stdout
                             secondCode <- getLine
                             if True == checkNinja (concat ns) secondName (secondCode !! 0)
-                                then do putStrLn "FIGHT!"
-                                        putStrLn $ name ((fight (getNinja (concat ns) firstName (firstCode !! 0)) (getNinja (concat ns) secondName (secondCode !! 0))) !! 0)
+                                then do printWinner ((fight (getNinja (concat ns) firstName (firstCode !! 0)) (getNinja (concat ns) secondName (secondCode !! 0))) !! 0)
                                         return(ns)
                                 else do putStrLn "The given ninja doesn't exist"
                                         return(ns)
@@ -73,6 +72,9 @@ printNinjas []     = return()
 printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
                         \" ++ status n ++ ", Round: "++ (show . r) n
                         printNinjas ns
+
+printWinner :: Ninja -> IO()
+printWinner n = print $ "Winner: " ++ name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
 
 checkNinja :: [Ninja] -> String -> Char -> Bool
 checkNinja n ninjaName ninjaCode
