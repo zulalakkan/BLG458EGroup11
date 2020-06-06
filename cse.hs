@@ -52,14 +52,14 @@ actionC ns = do putStr "Enter first ninja's name: "
                 putStr "Enter first ninja's country code: "
                 hFlush stdout
                 firstCode <- getLine
-                if True `elem` checkNinja (concat ns) firstName (firstCode !! 0)
+                if True == checkNinja (concat ns) firstName (firstCode !! 0)
                     then do putStr "Enter second ninja's name: "
                             hFlush stdout
                             secondName <- getLine
                             putStr "Enter second ninja's country code: "
                             hFlush stdout
                             secondCode <- getLine
-                            if True `elem` checkNinja (concat ns) secondName (secondCode !! 0)
+                            if True == checkNinja (concat ns) secondName (secondCode !! 0)
                                 then do putStrLn "FIGHT!"
                                         putStrLn $ name ((fight (getNinja (concat ns) firstName (firstCode !! 0)) (getNinja (concat ns) secondName (secondCode !! 0))) !! 0)
                                         return(ns)
@@ -74,11 +74,10 @@ printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n 
                         \" ++ status n ++ ", Round: "++ (show . r) n
                         printNinjas ns
 
--- This code is most probably super stupid (a list of bools for one ninja!), but so far it seems to work (written at 4AM).
--- If you have any idea how to simplify it please do so and make me aware of it.
-checkNinja :: [Ninja] -> String -> Char -> [Bool]
-checkNinja [] _ _ = False : []
-checkNinja (n:ns) ninjaName ninjaCode = (((name n) == ninjaName) && ((country n) == ninjaCode)) : checkNinja ns ninjaName ninjaCode
+checkNinja :: [Ninja] -> String -> Char -> Bool
+checkNinja n ninjaName ninjaCode
+    | filter ((\n -> ((name n) == ninjaName) && ((country n) == ninjaCode))) n == [] = False
+    | otherwise = True
 
 getNinja :: [Ninja] -> String -> Char -> Ninja
 getNinja ns ninjaName ninjaCode = (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns) !! 0
@@ -87,6 +86,7 @@ fight :: Ninja -> Ninja -> [Ninja]
 fight n1 n2
     |getScore n1 > getScore n2 = [n1, n2]
     |getScore n1 == getScore n2 = betterAbility n1 n2
+    |otherwise = [n1, n2]
         where betterAbility n1 n2
                 |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) > ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
                 |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) == ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
@@ -107,7 +107,7 @@ data Ninja = Ninja { name:: String, country:: Char,
                      status:: String, exam1:: Float,
                      exam2:: Float, ability1:: String,
                      ability2:: String, r:: Int}
-                     deriving Show
+                     deriving (Show, Eq)
 
 fire :: [Ninja] -- Land of Fire
 fire = []
@@ -199,6 +199,17 @@ placeNinja ninja lands = placeIter (index $ country ninja) lands 0
                 placeIter _ _ 5      = []
                 placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
                                             else l : (placeIter i ls (n+1))
+
+--This probably can be done using currying 
+removeNinjaFromLand :: Ninja -> [Ninja] -> [Ninja]
+removeNinjaFromLand _ [] = []
+removeNinjaFromLand ninja (n:ns)
+    |ninja == n = removeNinjaFromLand ninja ns
+    |otherwise = n : removeNinjaFromLand ninja ns
+
+removeNinja :: Ninja -> [[Ninja]] -> [[Ninja]] 
+removeNinja ninja lands = map remove_helper lands
+    where remove_helper land = removeNinjaFromLand ninja land
 
 index :: Char -> Int
 index c
