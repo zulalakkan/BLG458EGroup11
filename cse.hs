@@ -60,11 +60,15 @@ actionC ns = do putStr "Enter first ninja's name: "
                             hFlush stdout
                             secondCode <- getLine
                             if True == checkNinja (concat ns) secondName (head secondCode)
-                                then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
-                                        let ninjas' = update winner ns
-                                        let winner' = getNinja (concat ninjas') (name winner) (country winner)
-                                        printWinner winner'
-                                        return(ninjas')
+                                then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
+                                        if True == fst fightCondition
+                                            then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
+                                                    let ninjas' = removeNinja loser (update winner ns)
+                                                    let winner' = getNinja (concat ninjas') (name winner) (country winner)
+                                                    printWinner winner'
+                                                    return(ninjas')
+                                            else do putStrLn $ snd fightCondition 
+                                                    return(ns)
                                 else do putStrLn "The given ninja doesn't exist"
                                         return(ns)
                     else do putStrLn "The given ninja doesn't exist!"
@@ -86,6 +90,13 @@ checkNinja n ninjaName ninjaCode
 
 getNinja :: [Ninja] -> String -> Char -> Ninja
 getNinja ns ninjaName ninjaCode = head (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns)
+
+checkFightCondition :: Ninja -> Ninja -> (Bool, String)
+checkFightCondition n1 n2
+    |country n1 == country n2 = (False, "Ninjas from the same country can't fight!")
+    |n1 == n2 = (False, "Ninja can't fight himself")
+    |(status n1 == "Journeyman" || status n2 == "Journeyman") = (False, "Countries which have journeymans can't fight!")
+    |otherwise = (True, "")
 
 fight :: Ninja -> Ninja -> [Ninja]
 fight n1 n2
@@ -213,8 +224,8 @@ removeNinjaFromLand ninja (n:ns)
     |otherwise = n : removeNinjaFromLand ninja ns
 
 removeNinja :: Ninja -> [[Ninja]] -> [[Ninja]] 
-removeNinja ninja lands = map remove_helper lands
-    where remove_helper land = removeNinjaFromLand ninja land
+removeNinja ninja lands = map removeHelper lands
+    where removeHelper land = removeNinjaFromLand ninja land
 
 index :: Char -> Int
 index c
