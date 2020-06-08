@@ -33,120 +33,37 @@ action ch ns
                         return(ns)
     | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
-    | elem ch "cC" = do ns' <- actionC ns
-                        return(ns')
-    | elem ch "dD" = do ns' <- actionD ns
-                        return(ns')
+    | elem ch "cC" = do putStr "Enter the name of the first ninja: "
+                        hFlush stdout
+                        line <- getLine
+
+                        if (elemChar line $ ns )== False then return(ns)
+                        else do 
+                                putStr "a: " 
+                                hFlush stdout 
+                                line <- getLine 
+                                return(ns)
+    | elem ch "dD" = return(ns)
     | elem ch "eE" = return(ns)
     | otherwise    = do putStrLn "Unknown action!"
                         return (ns)
+
+
+elemChar :: String -> [Ninja]-> Bool
+elemChar _ [] = False
+elemChar x (n:ns) = if x == n.name then True else elemChar x ns
+
 
 actionA :: [[Ninja]] -> (Char -> IO())
 actionA ns = \ch -> do let land = (!!) ns $ index ch
                        printNinjas land
                        if promoted land then putStrLn $ warning ch else return()
 
-actionC :: [[Ninja]] -> IO [[Ninja]]
-actionC ns = do putStr "Enter first ninja's name: "
-                hFlush stdout
-                firstName <- getLine
-                putStr "Enter first ninja's country code: "
-                hFlush stdout
-                firstCode <- getLine
-                if True == checkNinjaInLand (concat ns) firstName (head firstCode)
-                    then do putStr "Enter second ninja's name: "
-                            hFlush stdout
-                            secondName <- getLine
-                            putStr "Enter second ninja's country code: "
-                            hFlush stdout
-                            secondCode <- getLine
-                            if True == checkNinjaInLand (concat ns) secondName (head secondCode)
-                                then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
-                                        if True == fst fightCondition
-                                            then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
-                                                    let ninjas' = removeNinja loser (update winner ns)                                                    
-                                                    printWinner $ getNinja (concat ninjas') (name winner) (country winner)
-                                                    return(ninjas')
-                                            else do putStrLn $ snd fightCondition 
-                                                    return(ns)
-                                else do putStrLn "The given ninja doesn't exist"
-                                        return(ns)
-                    else do putStrLn "The given ninja doesn't exist!"
-                            return(ns)
-
-actionD :: [[Ninja]] -> IO [[Ninja]]
-actionD ns = do putStr "Enter the first country code: "
-                hFlush stdout
-                firstCode <- getLine
-                if True == fst (checkLand (ns !! (index (head firstCode))))
-                    then do putStr "Enter the second country code: "
-                            hFlush stdout
-                            secondCode <- getLine
-                            if True == fst (checkLand (ns !! (index (head secondCode))))
-                                then do if (index (head firstCode)) /= (index (head secondCode))
-                                            then do let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                                    if True == fst fightCondition
-                                                        then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                                                let ninjas' = removeNinja loser (update winner ns)
-                                                                printWinner $ getNinja (concat ninjas') (name winner) (country winner)
-                                                                return(ninjas')
-                                                        else do putStrLn $ snd fightCondition
-                                                                return(ns)
-                                            else do putStrLn "A country can't fight itself."
-                                                    return(ns)
-                                else do putStrLn (snd (checkLand (ns !! (index (head secondCode)))))
-                                        return(ns)
-                    else do putStrLn (snd (checkLand (ns !! (index (head firstCode)))))
-                            return(ns)
-                
---let fightCondition = 
---                if True == fst fightCondition
---                    then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
---                            let ninjas' = removeNinja loser (update winner ns)
---                           printWinner $ getNinja (concat ninjas') (name winner) (country winner)
---                            return(ninjas')
---                    else do putStrLn $ snd fightCondition
---                            return(ns)
-
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
 printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
                         \" ++ status n ++ ", Round: "++ (show . r) n
-                        printNinjas ns
-
-printWinner :: Ninja -> IO()
-printWinner n = print $ "Winner: " ++ name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
-
-checkNinjaInLand :: [Ninja] -> String -> Char -> Bool
-checkNinjaInLand n ninjaName ninjaCode
-    | filter ((\n -> ((name n) == ninjaName) && ((country n) == ninjaCode))) n == [] = False
-    | otherwise = True
-
-getNinja :: [Ninja] -> String -> Char -> Ninja
-getNinja ns ninjaName ninjaCode = head (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns)
-
-checkFightCondition :: Ninja -> Ninja -> (Bool, String)
-checkFightCondition n1 n2
-    |country n1 == country n2 = (False, "Ninjas from the same country can't fight!")
-    |n1 == n2 = (False, "Ninja can't fight himself")
-    |(status n1 == "Journeyman" || status n2 == "Journeyman") = (False, "Countries which have journeymans can't fight!")
-    |otherwise = (True, "")
-
-checkLand :: [Ninja] -> (Bool, String)
-checkLand l
-    |null l = (False, "All ninjas from this country have been disqualified.")
-    |elem "Journeyman" (map status l) = (False, "Countries with journeymans can't fight.")
-    |otherwise = (True, "")
-
-fight :: Ninja -> Ninja -> [Ninja]
-fight n1 n2
-    |getScore n1 > getScore n2 = [n1, n2]
-    |getScore n1 == getScore n2 = betterAbility n1 n2
-    |otherwise = [n2, n1]
-        where betterAbility n1 n2
-                |getScore n1 > getScore n2 = [n1, n2]
-                |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) == ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
-                |otherwise = [n2, n1]
+                        printNinjas ns 
 
 lands :: [String]
 lands = ["Fire", "Lightning", "Water", "Wind", "Earth"]
@@ -163,7 +80,7 @@ data Ninja = Ninja { name:: String, country:: Char,
                      status:: String, exam1:: Float,
                      exam2:: Float, ability1:: String,
                      ability2:: String, r:: Int}
-                     deriving (Show, Eq)
+                     deriving Show
 
 fire :: [Ninja] -- Land of Fire
 fire = []
@@ -256,17 +173,6 @@ placeNinja ninja lands = placeIter (index $ country ninja) lands 0
                 placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
                                             else l : (placeIter i ls (n+1))
 
---This probably can be done using currying 
-removeNinjaFromLand :: Ninja -> [Ninja] -> [Ninja]
-removeNinjaFromLand _ [] = []
-removeNinjaFromLand ninja (n:ns)
-    |ninja == n = removeNinjaFromLand ninja ns
-    |otherwise = n : removeNinjaFromLand ninja ns
-
-removeNinja :: Ninja -> [[Ninja]] -> [[Ninja]] 
-removeNinja ninja lands = map removeHelper lands
-    where removeHelper land = removeNinjaFromLand ninja land
-
 index :: Char -> Int
 index c
     | elem c "fF" = 0                       -- fire
@@ -284,11 +190,11 @@ countryCode c = case c of
     "Water"     -> 'w'
     "Earth"     -> 'e'
 
-update :: Ninja -> [[Ninja]] -> [[Ninja]]
-update ninja = updateList (updateRound ninja)
+update :: Ninja -> [[Ninja]] -> (Ninja->Ninja) -> [[Ninja]]
+update ninja ninjas updateFunc = updateList (updateFunc ninja) ninjas 
 
 updateRound :: Ninja -> Ninja
-updateRound n = if r n == 2 then updateStatus n {r = r n + 1} else n {r = r n + 1}
+updateRound n = n {r = r n + 1}
 
 updateStatus :: Ninja -> Ninja
 updateStatus n = n {status = "Journeyman"}
