@@ -26,10 +26,7 @@ menu lands = do putStrLn "a) View a Country's Ninja Information\n\
 
 action :: Char -> [[Ninja]] -> IO [[Ninja]]
 action ch ns
-    | elem ch "aA" = do putStr "Enter the country code: "
-                        hFlush stdout 
-                        line <- getLine
-                        actionA ns $ head line
+    | elem ch "aA" = do actionA ns
                         return(ns)
     | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
@@ -42,10 +39,14 @@ action ch ns
     | otherwise    = do putStrLn "Unknown action!"
                         return (ns)
 
-actionA :: [[Ninja]] -> (Char -> IO())
-actionA ns = \ch -> do let land = (!!) ns $ index ch
-                       printNinjas land
-                       if promoted land then putStrLn $ warning ch else return()
+actionA :: [[Ninja]] -> IO()
+actionA ns = do putStr "Enter the country code: "
+                hFlush stdout 
+                line <- getLine
+                if null line then return() else do
+                       let land = (!!) ns $ index $ head line
+                       if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
+                       if promoted land then putStrLn $ warning (head line) else return()
 
 actionC :: [[Ninja]] -> IO [[Ninja]]
 actionC ns = do putStr "Enter first ninja's name: "
@@ -54,16 +55,16 @@ actionC ns = do putStr "Enter first ninja's name: "
                 putStr "Enter first ninja's country code: "
                 hFlush stdout
                 firstCode <- getLine
-                if True == checkNinjaInLand (concat ns) firstName (head firstCode)
+                if checkNinjaInLand (getLand (head firstCode) ns) firstName
                     then do putStr "Enter second ninja's name: "
                             hFlush stdout
                             secondName <- getLine
                             putStr "Enter second ninja's country code: "
                             hFlush stdout
                             secondCode <- getLine
-                            if True == checkNinjaInLand (concat ns) secondName (head secondCode)
+                            if checkNinjaInLand (getLand (head secondCode) ns) secondName
                                 then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
-                                        if True == fst fightCondition
+                                        if fst fightCondition
                                             then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
                                                     let ninjas' = removeNinja loser (update winner ns)                                                    
                                                     printWinner $ getNinja (concat ninjas') (name winner) (country winner)
@@ -109,27 +110,24 @@ actionD ns = do putStr "Enter the first country code: "
 --                    else do putStrLn $ snd fightCondition
 --                            return(ns)
 
+-- printNinjas = mapM_ print
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
-printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
-                        \" ++ status n ++ ", Round: "++ (show . r) n
+printNinjas (n:ns) = do print n
                         printNinjas ns
 
+
 printJourneymans :: [Ninja] -> IO()
-printJourneymans [] = return()
-printJourneymans (n:ns) = if status n == "Journeyman"
-                            then do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
-                                    \" ++ status n  ++ ", Round: " ++ (show. r) n
-                                    printJourneymans ns
-                            else printJourneymans ns
+printJourneymans = (printNinjas . filter (\n -> status n == "Journeyman"))
 
 printWinner :: Ninja -> IO()
-printWinner n = print $ "Winner: " ++ name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
+printWinner n = putStrLn $ "Winner: " ++ name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
 
-checkNinjaInLand :: [Ninja] -> String -> Char -> Bool
-checkNinjaInLand n ninjaName ninjaCode
-    | filter ((\n -> ((name n) == ninjaName) && ((country n) == ninjaCode))) n == [] = False
-    | otherwise = True
+getLand :: Char -> [[Ninja]] -> [Ninja]
+getLand ch ns = (!!) ns $ index ch
+
+checkNinjaInLand :: [Ninja] -> String -> Bool
+checkNinjaInLand n ninjaName = filter (\x -> name x == ninjaName) n /= []
 
 getNinja :: [Ninja] -> String -> Char -> Ninja
 getNinja ns ninjaName ninjaCode = head (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns)
@@ -172,7 +170,11 @@ data Ninja = Ninja { name:: String, country:: Char,
                      status:: String, exam1:: Float,
                      exam2:: Float, ability1:: String,
                      ability2:: String, r:: Int}
-                     deriving (Show, Eq)
+                     deriving (Eq)
+
+instance Show Ninja where
+    show n = name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
+                        \" ++ status n ++ ", Round: "++ (show . r) n
 
 fire :: [Ninja] -- Land of Fire
 fire = []
@@ -265,16 +267,12 @@ placeNinja ninja lands = placeIter (index $ country ninja) lands 0
                 placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
                                             else l : (placeIter i ls (n+1))
 
---This probably can be done using currying 
-removeNinjaFromLand :: Ninja -> [Ninja] -> [Ninja]
-removeNinjaFromLand _ [] = []
-removeNinjaFromLand ninja (n:ns)
-    |ninja == n = removeNinjaFromLand ninja ns
-    |otherwise = n : removeNinjaFromLand ninja ns
-
 removeNinja :: Ninja -> [[Ninja]] -> [[Ninja]] 
-removeNinja ninja lands = map removeHelper lands
-    where removeHelper land = removeNinjaFromLand ninja land
+removeNinja ninja = map (\x -> if x /= [] && (country ninja == (country . head) x) then remove ninja x else x)
+
+remove :: Ninja -> [Ninja] -> [Ninja]
+remove _ [] = []
+remove n ns = [i | i <-ns, i /= n]
 
 index :: Char -> Int
 index c
