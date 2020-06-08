@@ -35,7 +35,8 @@ action ch ns
                         return(ns)
     | elem ch "cC" = do ns' <- actionC ns
                         return(ns')
-    | elem ch "dD" = return(ns)
+    | elem ch "dD" = do ns' <- actionD ns
+                        return(ns')
     | elem ch "eE" = return(ns)
     | otherwise    = do putStrLn "Unknown action!"
                         return (ns)
@@ -52,14 +53,14 @@ actionC ns = do putStr "Enter first ninja's name: "
                 putStr "Enter first ninja's country code: "
                 hFlush stdout
                 firstCode <- getLine
-                if True == checkNinja (concat ns) firstName (head firstCode)
+                if True == checkNinjaInLand (concat ns) firstName (head firstCode)
                     then do putStr "Enter second ninja's name: "
                             hFlush stdout
                             secondName <- getLine
                             putStr "Enter second ninja's country code: "
                             hFlush stdout
                             secondCode <- getLine
-                            if True == checkNinja (concat ns) secondName (head secondCode)
+                            if True == checkNinjaInLand (concat ns) secondName (head secondCode)
                                 then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
                                         if True == fst fightCondition
                                             then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
@@ -74,6 +75,22 @@ actionC ns = do putStr "Enter first ninja's name: "
                     else do putStrLn "The given ninja doesn't exist!"
                             return(ns)
 
+actionD :: [[Ninja]] -> IO [[Ninja]]
+actionD ns = do putStr "Enter the first country code: "
+                hFlush stdout
+                firstCode <- getLine
+                putStr "Enter the second country code: "
+                hFlush stdout
+                secondCode <- getLine
+                let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
+                if True == fst fightCondition
+                    then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
+                            let ninjas' = removeNinja loser (update winner ns)
+                            printWinner $ getNinja (concat ninjas') (name winner) (country winner)
+                            return(ninjas')
+                    else do putStrLn $ snd fightCondition
+                            return(ns)
+
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
 printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n ++ ", Status: \
@@ -83,8 +100,8 @@ printNinjas (n:ns) = do putStrLn $ name n ++ ", Score: " ++ (show . getScore) n 
 printWinner :: Ninja -> IO()
 printWinner n = print $ "Winner: " ++ name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
 
-checkNinja :: [Ninja] -> String -> Char -> Bool
-checkNinja n ninjaName ninjaCode
+checkNinjaInLand :: [Ninja] -> String -> Char -> Bool
+checkNinjaInLand n ninjaName ninjaCode
     | filter ((\n -> ((name n) == ninjaName) && ((country n) == ninjaCode))) n == [] = False
     | otherwise = True
 
@@ -104,7 +121,7 @@ fight n1 n2
     |getScore n1 == getScore n2 = betterAbility n1 n2
     |otherwise = [n2, n1]
         where betterAbility n1 n2
-                |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) > ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
+                |getScore n1 > getScore n2 = [n1, n2]
                 |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) == ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
                 |otherwise = [n2, n1]
 
