@@ -82,16 +82,19 @@ actionD ns = do putStr "Enter the first country code: "
                     then do putStr "Enter the second country code: "
                             hFlush stdout
                             secondCode <- getLine
-                            if (index (head firstCode)) /= (index (head secondCode))
-                                then do let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                        if True == fst fightCondition
-                                            then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                                    let ninjas' = removeNinja loser (update winner ns)
-                                                    printWinner $ getNinja (concat ninjas') (name winner) (country winner)
-                                                    return(ninjas')
-                                            else do putStrLn $ snd fightCondition
+                            if True == fst (checkLand (ns !! (index (head secondCode))))
+                                then do if (index (head firstCode)) /= (index (head secondCode))
+                                            then do let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
+                                                    if True == fst fightCondition
+                                                        then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
+                                                                let ninjas' = removeNinja loser (update winner ns)
+                                                                printWinner $ getNinja (concat ninjas') (name winner) (country winner)
+                                                                return(ninjas')
+                                                        else do putStrLn $ snd fightCondition
+                                                                return(ns)
+                                            else do putStrLn "A country can't fight itself."
                                                     return(ns)
-                                else do putStrLn "A country can't fight itself."
+                                else do putStrLn (snd (checkLand (ns !! (index (head secondCode)))))
                                         return(ns)
                     else do putStrLn (snd (checkLand (ns !! (index (head firstCode)))))
                             return(ns)
