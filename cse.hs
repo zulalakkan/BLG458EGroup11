@@ -67,11 +67,11 @@ actionC ns = do putStr "Enter first ninja's name: "
                             hFlush stdout
                             secondCode <- getLine                            
                             if checkNinjaInLand (getLand (head secondCode) ns) secondName
-                                then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
+                                then do let fightCondition = checkFightCondition (getNinja (getLand (head firstCode) ns) firstName) (getNinja (getLand (head secondCode) ns) secondName) 
                                         if fst fightCondition
-                                            then do let [winner, loser] = fight (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode))
+                                            then do let [winner, loser] = fight (getNinja (getLand (head firstCode) ns) firstName) (getNinja (getLand (head secondCode) ns) secondName)
                                                     let ninjas' = removeNinja loser (update winner ns)                                                    
-                                                    printWinner $ getNinja (concat ninjas') (name winner) (country winner)
+                                                    printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
                                                     return(ninjas')
                                             else do putStrLn $ snd fightCondition 
                                                     return(ns)
@@ -94,7 +94,7 @@ actionD ns = do putStr "Enter the first country code: "
                                                     if True == fst fightCondition
                                                         then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
                                                                 let ninjas' = removeNinja loser (update winner ns)
-                                                                printWinner $ getNinja (concat ninjas') (name winner) (country winner)
+                                                                printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
                                                                 return(ninjas')
                                                         else do putStrLn $ snd fightCondition
                                                                 return(ns)
@@ -110,7 +110,6 @@ printNinjas []     = return()
 printNinjas (n:ns) = do print n
                         printNinjas ns
 
-
 printJourneymans :: [Ninja] -> IO()
 printJourneymans = (printNinjas . filter (\n -> status n == "Journeyman"))
 
@@ -123,8 +122,8 @@ getLand ch ns = (!!) ns $ index ch
 checkNinjaInLand :: [Ninja] -> String -> Bool
 checkNinjaInLand n ninjaName = filter (\x -> name x == ninjaName) n /= []
 
-getNinja :: [Ninja] -> String -> Char -> Ninja
-getNinja ns ninjaName ninjaCode = head (filter (\n -> ((name n) == ninjaName) && ((country n == ninjaCode))) ns)
+getNinja :: [Ninja] -> String -> Ninja
+getNinja ns ninjaName = head (filter (\n -> name n == ninjaName) ns)
 
 checkFightCondition :: Ninja -> Ninja -> (Bool, String)
 checkFightCondition n1 n2
@@ -308,8 +307,6 @@ updateLand ninja (n:ns)
     |(name ninja) == name n = insert precede ninja ns
     |otherwise = n: updateLand ninja ns
                         
-
-
 toLowerString :: [Char] -> [Char]
 toLowerString (x:xs) = toUpper x : map toLower xs
 toLowerString [] = []
