@@ -1,5 +1,6 @@
 import System.Environment -- command line arguments
 import System.IO -- file operations
+import Data.Char (toLower)
 
 main :: IO()
 main = do args <- getArgs
@@ -42,7 +43,8 @@ action ch ns
 actionA :: [[Ninja]] -> IO()
 actionA ns = do putStr "Enter the country code: "
                 hFlush stdout 
-                line <- getLine
+                line' <- getLine
+                let line = toLowerString line'
                 if null line then return() else do
                        let land = (!!) ns $ index $ head line
                        if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
@@ -51,17 +53,21 @@ actionA ns = do putStr "Enter the country code: "
 actionC :: [[Ninja]] -> IO [[Ninja]]
 actionC ns = do putStr "Enter first ninja's name: "
                 hFlush stdout
-                firstName <- getLine
+                firstName' <- getLine
+                let firstName = toLowerString firstName'
                 putStr "Enter first ninja's country code: "
                 hFlush stdout
-                firstCode <- getLine
+                firstCode' <- getLine
+                let firstCode = toLowerString firstCode'
                 if checkNinjaInLand (getLand (head firstCode) ns) firstName
                     then do putStr "Enter second ninja's name: "
                             hFlush stdout
-                            secondName <- getLine
+                            secondName' <- getLine
+                            let secondName = toLowerString secondName'
                             putStr "Enter second ninja's country code: "
                             hFlush stdout
-                            secondCode <- getLine
+                            secondCode' <- getLine
+                            let secondCode = toLowerString secondCode'
                             if checkNinjaInLand (getLand (head secondCode) ns) secondName
                                 then do let fightCondition = checkFightCondition (getNinja (concat ns) firstName (head firstCode)) (getNinja (concat ns) secondName (head secondCode)) 
                                         if fst fightCondition
@@ -79,11 +85,13 @@ actionC ns = do putStr "Enter first ninja's name: "
 actionD :: [[Ninja]] -> IO [[Ninja]]
 actionD ns = do putStr "Enter the first country code: "
                 hFlush stdout
-                firstCode <- getLine
+                firstCode' <- getLine
+                let firstCode = toLowerString firstCode'
                 if True == fst (checkLand (ns !! (index (head firstCode))))
                     then do putStr "Enter the second country code: "
                             hFlush stdout
-                            secondCode <- getLine
+                            secondCode' <- getLine
+                            let secondCode =toLowerString secondCode'
                             if True == fst (checkLand (ns !! (index (head secondCode))))
                                 then do if (index (head firstCode)) /= (index (head secondCode))
                                             then do let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
@@ -305,3 +313,5 @@ updateLand ninja (n:ns)
     |(name ninja) == name n = insert precede ninja ns
     |otherwise = n: updateLand ninja ns
                         
+toLowerString ::[Char] -> [Char]
+toLowerString = map toLower 
