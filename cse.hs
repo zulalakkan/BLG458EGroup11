@@ -100,17 +100,7 @@ actionD ns = do putStr "Enter the first country code: "
                                         return(ns)
                     else do putStrLn (snd (checkLand (ns !! (index (head firstCode)))))
                             return(ns)
-                
---let fightCondition = 
---                if True == fst fightCondition
---                    then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
---                            let ninjas' = removeNinja loser (update winner ns)
---                           printWinner $ getNinja (concat ninjas') (name winner) (country winner)
---                            return(ninjas')
---                    else do putStrLn $ snd fightCondition
---                            return(ns)
 
--- printNinjas = mapM_ print
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
 printNinjas (n:ns) = do print n
@@ -302,16 +292,16 @@ updateStatus n = n {status = "Journeyman"}
 
 updateList :: Ninja -> [[Ninja]] -> [[Ninja]]
 updateList _ []         = []
-updateList n ls@(l:ls') = if (index $ country n) + length ls == 5
-                            then (updateLand n l):ls'
-                            else l: updateList n ls'
+updateList n ls@(l:ls')
+    |(index $ country n) + length ls == 5 = (updateLand n l):ls'
+    |otherwise = l: updateList n ls'
 
 -- update list with updated ninja 
 -- consider ninja comparison instead of name comparison
 -- check insert part again!! 
 updateLand :: Ninja -> [Ninja] -> [Ninja]
 updateLand _ []         = []
-updateLand ninja (n:ns) = if (name ninja) == name n
-                            then insert precede ninja ns
-                            else n: updateLand ninja ns
+updateLand ninja (n:ns)
+    |(name ninja) == name n = insert precede ninja ns
+    |otherwise = n: updateLand ninja ns
                         
