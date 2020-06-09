@@ -51,34 +51,49 @@ actionA ns = do putStr "Enter the country code: "
                        if promoted land then putStrLn $ warning (head line) else return()
 
 actionC :: [[Ninja]] -> IO [[Ninja]]
-actionC ns = do putStr "Enter first ninja's name: "
-                hFlush stdout
-                firstName' <- getLine
-                let firstName = toLowerString firstName'
-                putStr "Enter first ninja's country code: "
-                hFlush stdout
-                firstCode <- getLine
-                if checkNinjaInLand (getLand (head firstCode) ns) firstName
-                    then do putStr "Enter second ninja's name: "
-                            hFlush stdout
-                            secondName' <- getLine
-                            let secondName = toLowerString secondName'
-                            putStr "Enter second ninja's country code: "
-                            hFlush stdout
-                            secondCode <- getLine                            
-                            if checkNinjaInLand (getLand (head secondCode) ns) secondName
-                                then do let fightCondition = checkFightCondition (getNinja (getLand (head firstCode) ns) firstName) (getNinja (getLand (head secondCode) ns) secondName) 
-                                        if fst fightCondition
-                                            then do let [winner, loser] = fight (getNinja (getLand (head firstCode) ns) firstName) (getNinja (getLand (head secondCode) ns) secondName)
-                                                    let ninjas' = removeNinja loser (update winner ns)                                                    
-                                                    printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
-                                                    return(ninjas')
-                                            else do putStrLn $ snd fightCondition 
-                                                    return(ns)
-                                else do putStrLn "The given ninja doesn't exist"
-                                        return(ns)
-                    else do putStrLn "The given ninja doesn't exist!"
+actionC ns = do fighters <- inputC ns
+                if null fighters then return(ns)
+                else do
+                    let fightCondition = checkFightCondition (fighters !! 0) (fighters !! 1)
+                    if fst fightCondition
+                    then do let [winner,loser] = fight (fighters !! 0) (fighters !! 1)
+                            let ninjas' = removeNinja loser (update winner ns)
+                            printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
+                            return(ninjas')
+                    else do putStrLn $ snd fightCondition
                             return(ns)
+
+order = ["first", "second"]
+
+inputC :: [[Ninja]] -> IO [Ninja]
+inputC = inputLoop [] 0
+    where
+        inputLoop :: [Ninja] -> Int -> [[Ninja]] -> IO [Ninja]
+        inputLoop res 2 _ = return (res)
+        inputLoop res i ns = do 
+                putStr $ "Enter " ++ (order !! i) ++ " ninja's name: "
+                hFlush stdout
+                line <- getLine
+                if null line
+                then do putStrLn "Empty name!"
+                        return([])
+                else do let name = toLowerString line
+                        putStr $ "Enter " ++ (order !! i) ++ " ninja's country code: "
+                        hFlush stdout
+                        line <- getLine
+                        if null line || (-1 == (index . head) line) 
+                        then do putStrLn "Unknown country code!"
+                                return ([])
+                        else do let code = head line
+                                if fst $ checkLand $ getLand code ns
+                                then do if checkNinjaInLand (getLand code ns) name
+                                        then do res'<- inputLoop ((getNinja (getLand code ns) name):res) (i+1) ns
+                                                return(res')
+                                        else do putStrLn "The given ninja doesn't exist!"
+                                                return ([])
+                                else do putStrLn $ snd $ checkLand $ getLand code ns
+                                        return ([])
+
 
 actionD :: [[Ninja]] -> IO [[Ninja]]
 actionD ns = do putStr "Enter the first country code: "
@@ -273,7 +288,7 @@ index c
     | elem c "wW" = 2                       -- water
     | elem c "nN" = 3                       -- wind
     | elem c "eE" = 4                       -- earth
-    | otherwise   = error "unknown country character"
+    | otherwise   = -1 -- error "unknown country character"
 
 countryCode :: String -> Char
 countryCode c = case c of
