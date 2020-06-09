@@ -37,7 +37,7 @@ action ch ns
     | elem ch "dD" = do fighters <- inputD ns
                         ns' <- makeRound fighters ns
                         return(ns')
-    | elem ch "eE" = do printJourneymans $concat ns
+    | elem ch "eE" = do printJourneymen $concat ns
                         return(ns)
     | otherwise    = do putStrLn "Unknown action!"
                         return (ns)
@@ -45,15 +45,15 @@ action ch ns
 actionA :: [[Ninja]] -> IO()
 actionA ns = do putStr "Enter the country code: "
                 hFlush stdout 
-                line' <- getLine
-                if null line' || (-1 == (index . head) line')
+                line <- getLine
+                if null line || (-1 == (index . head) line)
                 then do putStrLn "Unknown country code!"
                         return()
-                else do let line = toLowerString line'
-                        if null line then return() else do
-                            let land = (!!) ns $ index $ head line
-                            if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
-                            if promoted land then putStrLn $ warning (head line) else return()
+                else do let land = getLand (head line) ns
+                        if null land
+                        then putStrLn "All ninjas from this country have been disqualified." 
+                        else do printNinjas land
+                                if promoted land then putStrLn $ warning (head line) else return()
 
 makeRound :: [Ninja] -> [[Ninja]] -> IO [[Ninja]]
 makeRound fighters ns
@@ -61,7 +61,7 @@ makeRound fighters ns
     | otherwise     = do let fightCondition = checkFightCondition (fighters !! 0) (fighters !! 1)
                          if fst fightCondition
                          then do let [winner,loser] = fight (fighters !! 0) (fighters !! 1)
-                                 let ninjas' = removeNinja loser (update winner ns)
+                                 let ninjas' = removeNinja loser $ update winner ns
                                  printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
                                  return(ninjas')
                          else do putStrLn $ snd fightCondition
@@ -124,8 +124,8 @@ printNinjas []     = return()
 printNinjas (n:ns) = do print n
                         printNinjas ns
 
-printJourneymans :: [Ninja] -> IO()
-printJourneymans = (printNinjas . filter (\n -> status n == "Journeyman"))
+printJourneymen :: [Ninja] -> IO()
+printJourneymen = (printNinjas . filter (\n -> status n == "Journeyman"))
 
 printWinner :: Ninja -> IO()
 printWinner n =  putStrLn $ "Winner: " ++name n ++ ", Round: "++ (show . r) n ++ ", Status: " ++ status n
@@ -137,19 +137,19 @@ checkNinjaInLand :: [Ninja] -> String -> Bool
 checkNinjaInLand n ninjaName = filter (\x -> name x == ninjaName) n /= []
 
 getNinja :: [Ninja] -> String -> Ninja
-getNinja ns ninjaName = head (filter (\n -> name n == ninjaName) ns)
+getNinja ns ninjaName = head $ filter (\n -> name n == ninjaName) ns
 
 checkFightCondition :: Ninja -> Ninja -> (Bool, String)
 checkFightCondition n1 n2
-    |country n1 == country n2 = (False, "Ninjas from the same country can't fight!")
     |n1 == n2 = (False, "Ninja can't fight himself")
-    |(status n1 == "Journeyman" || status n2 == "Journeyman") = (False, "Countries which have journeymans can't fight!")
+    |country n1 == country n2 = (False, "Ninjas from the same country can't fight!")
+    |status n1 == "Journeyman" || status n2 == "Journeyman" = (False, "Countries which have journeymen can't fight!")
     |otherwise = (True, "")
 
 checkLand :: [Ninja] -> (Bool, String)
 checkLand l
     |null l = (False, "All ninjas from this country have been disqualified.")
-    |elem "Journeyman" (map status l) = (False, "Countries with journeymans can't fight.")
+    |(status . last) l ==  "Journeyman" = (False, "Countries with journeymen can't fight.")
     |otherwise = (True, "")
 
 fight :: Ninja -> Ninja -> [Ninja]
@@ -158,7 +158,7 @@ fight n1 n2
     |getScore n1 == getScore n2 = betterAbility n1 n2
     |otherwise = [n2, n1]
         where betterAbility n1 n2
-                |(((getAbilityScore $ ability1 n1) + (getAbilityScore $ ability2 n1)) >= ((getAbilityScore $ ability1 n2) + (getAbilityScore $ ability2 n2))) = [n1, n2]
+                |(getAbilityScore . ability1) n1 + (getAbilityScore . ability2) n1 >= (getAbilityScore . ability1) n2 + (getAbilityScore . ability2) n2 = [n1, n2]
                 |otherwise = [n2, n1]
 
 lands :: [String]
@@ -271,7 +271,7 @@ placeNinja ninja lands = placeIter (index $ country ninja) lands 0
                 placeIter :: Int -> [[Ninja]] -> Int -> [[Ninja]]
                 placeIter _ _ 5      = []
                 placeIter i (l:ls) n = if n == i then (insert precede ninja l) : (ls)
-                                            else l : (placeIter i ls (n+1))
+                                                 else l : (placeIter i ls (n+1))
 
 removeNinja :: Ninja -> [[Ninja]] -> [[Ninja]] 
 removeNinja ninja = map (\x -> if x /= [] && (country ninja == (country . head) x) then remove ninja x else x)
@@ -298,7 +298,7 @@ countryCode c = case c of
     "Earth"     -> 'e'
 
 update :: Ninja -> [[Ninja]] -> [[Ninja]]
-update ninja = updateList (updateRound ninja)
+update ninja = (updateList . updateRound) ninja
 
 updateRound :: Ninja -> Ninja
 updateRound n = if r n == 2 then updateStatus n {r = r n + 1} else n {r = r n + 1}
@@ -312,9 +312,6 @@ updateList n ls@(l:ls')
     |(index $ country n) + length ls == 5 = (updateLand n l):ls'
     |otherwise = l: updateList n ls'
 
--- update list with updated ninja 
--- consider ninja comparison instead of name comparison
--- check insert part again!! 
 updateLand :: Ninja -> [Ninja] -> [Ninja]
 updateLand _ []         = []
 updateLand ninja (n:ns)
