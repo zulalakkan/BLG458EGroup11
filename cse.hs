@@ -46,11 +46,14 @@ actionA :: [[Ninja]] -> IO()
 actionA ns = do putStr "Enter the country code: "
                 hFlush stdout 
                 line' <- getLine
-                let line = toLowerString line'
-                if null line then return() else do
-                       let land = (!!) ns $ index $ head line
-                       if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
-                       if promoted land then putStrLn $ warning (head line) else return()
+                if null line' || (-1 == (index . head) line')
+                then do putStrLn "Unknown country code!"
+                        return()
+                else do let line = toLowerString line'
+                        if null line then return() else do
+                            let land = (!!) ns $ index $ head line
+                            if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
+                            if promoted land then putStrLn $ warning (head line) else return()
 
 makeRound :: [Ninja] -> [[Ninja]] -> IO [[Ninja]]
 makeRound fighters ns
