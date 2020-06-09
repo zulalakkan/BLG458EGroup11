@@ -31,9 +31,11 @@ action ch ns
                         return(ns)
     | elem ch "bB" = do printNinjas $ sort precede $ concat ns
                         return(ns)
-    | elem ch "cC" = do ns' <- actionC ns
+    | elem ch "cC" = do fighters <- inputC ns
+                        ns' <- makeRound fighters ns
                         return(ns')
-    | elem ch "dD" = do ns' <- actionD ns
+    | elem ch "dD" = do fighters <- inputD ns
+                        ns' <- makeRound fighters ns
                         return(ns')
     | elem ch "eE" = do printJourneymans $concat ns
                         return(ns)
@@ -50,18 +52,17 @@ actionA ns = do putStr "Enter the country code: "
                        if null land then putStrLn "All ninjas from this country have been disqualified." else printNinjas land
                        if promoted land then putStrLn $ warning (head line) else return()
 
-actionC :: [[Ninja]] -> IO [[Ninja]]
-actionC ns = do fighters <- inputC ns
-                if null fighters then return(ns)
-                else do
-                    let fightCondition = checkFightCondition (fighters !! 0) (fighters !! 1)
-                    if fst fightCondition
-                    then do let [winner,loser] = fight (fighters !! 0) (fighters !! 1)
-                            let ninjas' = removeNinja loser (update winner ns)
-                            printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
-                            return(ninjas')
-                    else do putStrLn $ snd fightCondition
-                            return(ns)
+makeRound :: [Ninja] -> [[Ninja]] -> IO [[Ninja]]
+makeRound fighters ns
+    | null fighters = return(ns)
+    | otherwise     = do let fightCondition = checkFightCondition (fighters !! 0) (fighters !! 1)
+                         if fst fightCondition
+                         then do let [winner,loser] = fight (fighters !! 0) (fighters !! 1)
+                                 let ninjas' = removeNinja loser (update winner ns)
+                                 printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
+                                 return(ninjas')
+                         else do putStrLn $ snd fightCondition
+                                 return(ns)
 
 order = ["first", "second"]
 
@@ -71,14 +72,14 @@ inputC = inputLoop [] 0
         inputLoop :: [Ninja] -> Int -> [[Ninja]] -> IO [Ninja]
         inputLoop res 2 _ = return (res)
         inputLoop res i ns = do 
-                putStr $ "Enter " ++ (order !! i) ++ " ninja's name: "
+                putStr $ "Enter the name of the " ++ (order !! i) ++ " ninja: "
                 hFlush stdout
                 line <- getLine
                 if null line
                 then do putStrLn "Empty name!"
                         return([])
                 else do let name = toLowerString line
-                        putStr $ "Enter " ++ (order !! i) ++ " ninja's country code: "
+                        putStr $ "Enter the country code of the " ++ (order !! i) ++ " ninja: "
                         hFlush stdout
                         line <- getLine
                         if null line || (-1 == (index . head) line) 
@@ -94,31 +95,26 @@ inputC = inputLoop [] 0
                                 else do putStrLn $ snd $ checkLand $ getLand code ns
                                         return ([])
 
+inputD :: [[Ninja]] -> IO [Ninja]
+inputD = inputLoop [] 0
+    where
+        inputLoop :: [Ninja] -> Int -> [[Ninja]] -> IO [Ninja]
+        inputLoop res 2 _ = return (res)
+        inputLoop res i ns = do 
+                    putStr $ "Enter the " ++ (order !! i) ++ " country code: "
+                    hFlush stdout
+                    line <- getLine
+                    if null line || (-1 == (index . head) line) 
+                    then do putStrLn "Unknown country code!"
+                            return ([])
+                    else do let code = head line
+                            if fst $ checkLand $ getLand code ns
+                            then do res'<- inputLoop ((head $ getLand code ns):res) (i+1) ns
+                                    return(res')
+                            else do putStrLn $ snd $ checkLand $ getLand code ns
+                                    return ([])
 
-actionD :: [[Ninja]] -> IO [[Ninja]]
-actionD ns = do putStr "Enter the first country code: "
-                hFlush stdout
-                firstCode <- getLine               
-                if True == fst (checkLand (ns !! (index (head firstCode))))
-                    then do putStr "Enter the second country code: "
-                            hFlush stdout
-                            secondCode <- getLine
-                            if True == fst (checkLand (ns !! (index (head secondCode))))
-                                then do if (index (head firstCode)) /= (index (head secondCode))
-                                            then do let fightCondition = checkFightCondition ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                                    if True == fst fightCondition
-                                                        then do let [winner, loser] = fight ((ns !! (index $ head firstCode)) !! 0) ((ns !! (index $ head secondCode)) !! 0)
-                                                                let ninjas' = removeNinja loser (update winner ns)
-                                                                printWinner $ getNinja (getLand (country winner) ninjas') (name winner)
-                                                                return(ninjas')
-                                                        else do putStrLn $ snd fightCondition
-                                                                return(ns)
-                                            else do putStrLn "A country can't fight itself."
-                                                    return(ns)
-                                else do putStrLn (snd (checkLand (ns !! (index (head secondCode)))))
-                                        return(ns)
-                    else do putStrLn (snd (checkLand (ns !! (index (head firstCode)))))
-                            return(ns)
+
 
 printNinjas :: [Ninja] -> IO()
 printNinjas []     = return()
