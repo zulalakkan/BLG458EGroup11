@@ -236,7 +236,7 @@ readLoop handle participants = do
                                 readLoop handle participants'
 
 parseLine :: [String] -> Ninja
-parseLine [n, c, e1, e2, a1, a2] = Ninja { name = n,
+parseLine [n, c, e1, e2, a1, a2] = Ninja { name = toLowerString n,
                         country = countryCode c, status = "Junior",
                         exam1 = read e1 :: Float, exam2 = read e2 :: Float,
                         ability1 = a1, ability2 = a2, r = 0}
